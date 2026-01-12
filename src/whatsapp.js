@@ -5,7 +5,7 @@ const config = require('./config');
 const axios = require('axios');
 const qrcode = require('qrcode');
 const qrcodeTerminal = require('qrcode-terminal');
-const { normalizeMessage } = require('./messageNormalizer');
+const { normalizeMessage, preloadLidMappings, validateMappings } = require('./messageNormalizer');
 
 let sock;
 let qrCodeData = null; // Store QR code data
@@ -43,8 +43,19 @@ async function connectToWhatsApp() {
                 connectToWhatsApp();
             }
         } else if (connection === 'open') {
-            console.log('opened connection');
+            console.log('✓ WhatsApp connection opened');
             qrCodeData = null;
+            
+            // Validate and preload LID mappings to ensure phone numbers are always resolved
+            console.log('\n=== LID Mapping Validation ===');
+            const validation = validateMappings();
+            if (validation.authDirExists) {
+                preloadLidMappings();
+                console.log('✓ Ready to resolve LIDs to phone numbers');
+            } else {
+                console.error('⚠ LID resolution may fail - auth directory missing!');
+            }
+            console.log('==============================\n');
         }
     });
 
@@ -61,7 +72,7 @@ async function connectToWhatsApp() {
                         if (!msg.key.fromMe) { // Don't send own messages to webhook loop
                              console.log('Sending message to webhook:', config.webhookUrl);
                              
-                             const normalizedMessage = normalizeMessage(msg);
+                             const normalizedMessage = normalizeMessage(msg, sock);
                              
                              await axios.post(config.webhookUrl, {
                                  event: 'message.received',
