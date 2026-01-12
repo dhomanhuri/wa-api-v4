@@ -5,6 +5,7 @@ const config = require('./config');
 const axios = require('axios');
 const qrcode = require('qrcode');
 const qrcodeTerminal = require('qrcode-terminal');
+const { normalizeMessage } = require('./messageNormalizer');
 
 let sock;
 let qrCodeData = null; // Store QR code data
@@ -59,10 +60,13 @@ async function connectToWhatsApp() {
                     for (const msg of m.messages) {
                         if (!msg.key.fromMe) { // Don't send own messages to webhook loop
                              console.log('Sending message to webhook:', config.webhookUrl);
-                             // Basic webhook implementation
+                             
+                             const normalizedMessage = normalizeMessage(msg);
+                             
                              await axios.post(config.webhookUrl, {
-                                 event: 'messages.upsert',
-                                 data: msg
+                                 event: 'message.received',
+                                 timestamp: Date.now(),
+                                 data: normalizedMessage
                              });
                         }
                     }
