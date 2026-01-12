@@ -1,8 +1,8 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const qrcode = require('qrcode');
-const { getSocket, getQrCode } = require('./whatsapp');
-const config = require('./config');
+import express from 'express';
+import bodyParser from 'body-parser';
+import qrcode from 'qrcode';
+import { getSocket, getQrCode } from './whatsapp.js';
+import config from './config.js';
 
 const router = express.Router();
 
@@ -63,4 +63,4 @@ router.get('/qr', async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

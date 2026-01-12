@@ -1,4 +1,34 @@
 /**
+ * Extract WhatsApp number from JID (removes @s.whatsapp.net suffix)
+ * @param {string} jid - WhatsApp JID
+ * @returns {string|null} - Phone number or null
+ */
+function extractPhoneNumber(jid) {
+    if (!jid) return null;
+    if (jid.endsWith('@s.whatsapp.net')) {
+        return jid.replace('@s.whatsapp.net', '');
+    }
+    if (jid.endsWith('@g.us')) {
+        // For groups, extract the number part before the hyphen
+        return jid.split('@')[0].split('-')[0];
+    }
+    return null; // For @lid or other formats
+}
+
+/**
+ * Extract LID from JID (for users with lidded IDs)
+ * @param {string} jid - WhatsApp JID
+ * @returns {string|null} - LID or null
+ */
+function extractLid(jid) {
+    if (!jid) return null;
+    if (jid.includes('@lid')) {
+        return jid.split('@')[0];
+    }
+    return null;
+}
+
+/**
  * Normalize message data into a consistent structure
  * @param {Object} msg - Raw Baileys message object
  * @returns {Object} - Normalized message structure
@@ -7,15 +37,20 @@ function normalizeMessage(msg) {
     const normalized = {
         messageId: msg.key.id,
         timestamp: msg.messageTimestamp ? Number(msg.messageTimestamp) * 1000 : Date.now(),
-        from: msg.key.remoteJid,
+        from: extractPhoneNumber(msg.key.remoteJid),
+        fromLid: extractLid(msg.key.remoteJid),
+        fromJid: msg.key.remoteJid, // Raw JID for reference
         fromMe: msg.key.fromMe || false,
-        participant: msg.key.participant || null, // For group messages
+        participant: msg.key.participant ? extractPhoneNumber(msg.key.participant) : null,
+        participantLid: msg.key.participant ? extractLid(msg.key.participant) : null,
+        participantJid: msg.key.participant || null, // Raw JID for group messages
         isGroup: msg.key.remoteJid.endsWith('@g.us'),
         messageType: null,
         content: null,
         caption: null,
         quotedMessage: null,
         mentions: [],
+        mentionLids: [],
         hasMedia: false,
         mediaUrl: null,
         mimeType: null,
@@ -47,16 +82,25 @@ function normalizeMessage(msg) {
         
         // Handle quoted messages
         if (messageContent.extendedTextMessage.contextInfo?.quotedMessage) {
+            const quotedParticipant = messageContent.extendedTextMessage.contextInfo.participant;
             normalized.quotedMessage = {
                 messageId: messageContent.extendedTextMessage.contextInfo.stanzaId,
-                participant: messageContent.extendedTextMessage.contextInfo.participant,
+                participant: extractPhoneNumber(quotedParticipant),
+                participantLid: extractLid(quotedParticipant),
+                participantJid: quotedParticipant,
                 content: extractQuotedContent(messageContent.extendedTextMessage.contextInfo.quotedMessage)
             };
         }
         
         // Handle mentions
         if (messageContent.extendedTextMessage.contextInfo?.mentionedJid) {
-            normalized.mentions = messageContent.extendedTextMessage.contextInfo.mentionedJid;
+            const mentionedJids = messageContent.extendedTextMessage.contextInfo.mentionedJid;
+            normalized.mentions = mentionedJids
+                .map(jid => extractPhoneNumber(jid))
+                .filter(num => num !== null);
+            normalized.mentionLids = mentionedJids
+                .map(jid => extractLid(jid))
+                .filter(lid => lid !== null);
         }
     }
     else if (messageContent.imageMessage) {
@@ -165,6 +209,6 @@ function extractQuotedContent(quotedMsg) {
     return '[Unknown]';
 }
 
-module.exports = {
+export {
     normalizeMessage
 };
