@@ -209,6 +209,6 @@ function extractQuotedContent(quotedMsg) {
     return '[Unknown]';
 }
 
-export {
+module.exports = {
     normalizeMessage
 };
