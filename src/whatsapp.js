@@ -9,6 +9,15 @@ const { normalizeMessage, preloadLidMappings, validateMappings } = require('./me
 
 let sock;
 let qrCodeData = null; // Store QR code data
+const processedMessages = new Set(); // Cache for processed message IDs
+
+// Clean up processed messages cache periodically
+setInterval(() => {
+    if (processedMessages.size > 5000) {
+        processedMessages.clear();
+        console.log('Cleared processed messages cache');
+    }
+}, 60 * 60 * 1000); // Clear every hour
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState(config.sessionPath);
@@ -70,6 +79,16 @@ async function connectToWhatsApp() {
                 if (m.type === 'notify') {
                     for (const msg of m.messages) {
                         if (!msg.key.fromMe) { // Don't send own messages to webhook loop
+                            const messageId = msg.key.id;
+                            
+                            // Check if message already processed
+                            if (processedMessages.has(messageId)) {
+                                console.log(`Skipping duplicate message: ${messageId}`);
+                                continue;
+                            }
+                            
+                            processedMessages.add(messageId);
+
                              console.log('Sending message to webhook:', config.webhookUrl);
                              
                              const normalizedMessage = normalizeMessage(msg, sock);
