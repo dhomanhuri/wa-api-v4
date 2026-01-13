@@ -89,6 +89,11 @@ async function connectToWhatsApp() {
                             
                             processedMessages.add(messageId);
 
+                            // Log incoming message
+                            const sender = msg.key.remoteJid;
+                            const msgType = Object.keys(msg.message || {})[0];
+                            console.log(`\n[New Message] From: ${sender} | Type: ${msgType}`);
+
                              console.log('Sending message to webhook:', config.webhookUrl);
                              
                              const normalizedMessage = normalizeMessage(msg, sock);
