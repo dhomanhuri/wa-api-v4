@@ -1,5 +1,5 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
-const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
+const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const config = require('./config');
 const axios = require('axios');
@@ -96,9 +96,32 @@ async function connectToWhatsApp() {
 
                              console.log('Sending message to webhook:', config.webhookUrl);
                              
-                             const normalizedMessage = normalizeMessage(msg, sock);
+                            const normalizedMessage = normalizeMessage(msg, sock);
+
+                            // Auto-download media for images
+                            if (normalizedMessage.messageType === 'image' && normalizedMessage.hasMedia) {
+                                try {
+                                    console.log('Downloading image media...');
+                                    const buffer = await downloadMediaMessage(
+                                        msg,
+                                        'buffer',
+                                        {},
+                                        { 
+                                            logger: pino({ level: 'silent' }),
+                                            reuploadRequest: sock.updateMediaMessage
+                                        }
+                                    );
+                                    if (buffer) {
+                                        normalizedMessage.base64 = buffer.toString('base64');
+                                        console.log('✓ Image downloaded and converted to base64');
+                                    }
+                                } catch (err) {
+                                    console.error('Failed to download media:', err.message);
+                                    normalizedMessage.mediaError = 'Failed to download media: ' + err.message;
+                                }
+                            }
                              
-                             await axios.post(config.webhookUrl, {
+                            await axios.post(config.webhookUrl, {
                                  event: 'message.received',
                                  timestamp: Date.now(),
                                  data: normalizedMessage
