@@ -91,16 +91,38 @@ Mendapatkan tampilan QR Code untuk login (jika belum terhubung).
 - **Response**: HTML Page containing QR Code image.
 
 ### 3. Kirim Pesan
-Mengirim pesan teks ke nomor tertentu.
+Mengirim pesan teks atau media ke nomor tertentu.
 
 - **URL**: `/api/send-message`
 - **Method**: `POST`
-- **Body**:
+- **Body (Text)**:
     ```json
     {
       "jid": "628123456789@s.whatsapp.net",
       "message": {
         "text": "Halo, ini pesan dari API!"
+      }
+    }
+    ```
+
+- **Body (Image URL)**:
+    ```json
+    {
+      "jid": "628123456789@s.whatsapp.net",
+      "message": {
+        "image": "https://example.com/image.jpg",
+        "caption": "Ini gambar dari URL"
+      }
+    }
+    ```
+
+- **Body (Image Base64)**:
+    ```json
+    {
+      "jid": "628123456789@s.whatsapp.net",
+      "message": {
+        "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ...",
+        "caption": "Ini gambar dari Base64"
       }
     }
     ```

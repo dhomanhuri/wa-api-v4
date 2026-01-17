@@ -22,6 +22,21 @@ router.post('/send-message', async (req, res) => {
     }
 
     try {
+        // Handle Image Message Helpers
+        if (message.image) {
+            // If image is a string (URL or Base64)
+            if (typeof message.image === 'string') {
+                if (message.image.startsWith('http')) {
+                    message.image = { url: message.image };
+                } else {
+                    // Assume Base64
+                    // Remove data:image/xxx;base64, prefix if present
+                    const base64Data = message.image.replace(/^data:image\/\w+;base64,/, "");
+                    message.image = Buffer.from(base64Data, 'base64');
+                }
+            }
+        }
+
         const result = await sock.sendMessage(jid, message);
         res.json({ success: true, result });
     } catch (error) {
